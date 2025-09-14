@@ -13,6 +13,7 @@ import PollCreation from "./pages/PollCreation";
 import ReportsDashboard from "./pages/ReportsDashboard";
 import PetitionDetails from "./pages/PetitionDetails";
 import { PetitionProvider } from "./PetitionContext";
+import OfficialsDashboardPage from "./pages/OfficialsDashboardPage";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
          <Route path="/poll-creation" element={<PollCreation />} />
           <Route path="/reports" element={<ReportsDashboard/>} />
             <Route path="/petitions/:id" element={<PetitionDetails />} />
+            <Route path="/officials-dashboard" element={<OfficialsDashboardPage />} />
 
       </Routes>
       </PetitionProvider>

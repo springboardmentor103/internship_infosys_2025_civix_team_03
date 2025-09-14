@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { apiFetch } from "../utils/api";
@@ -22,7 +23,6 @@ export default function DashboardPage() {
 
   if (!data) return <p className="p-6">Loading...</p>;
 
-  
   const {
     petitions = [],
     myPetitions = 0,
@@ -38,7 +38,6 @@ export default function DashboardPage() {
 
   return (
     <section className="flex min-h-screen bg-gray-50">
-     
       <aside className="w-64 bg-[#006a9a] text-white p-6 hidden md:block">
         <h2 className="text-2xl font-bold mb-8">Civix</h2>
         <nav className="space-y-4">
@@ -49,7 +48,6 @@ export default function DashboardPage() {
             { name: "Reports", path: "/reports", icon: "📝" },
             { name: "Settings", path: "/reports", icon: "⚙️" },
             { name: "Help & Support", path: "/reports", icon: "❓" },
-
           ].map((item) => (
             <Link
               key={item.path}
@@ -67,25 +65,27 @@ export default function DashboardPage() {
         </nav>
       </aside>
 
-  
       <section className="flex-1 flex flex-col">
-       
         <header className="bg-[#006699] text-white flex justify-between items-center px-6 py-3">
           <nav className="flex-1 flex justify-center space-x-6 text-lg">
             <Link to="/dashboard" className="hover:underline">Home</Link>
             <Link to="/petitions" className="hover:underline">Petitions</Link>
             <Link to="/polls" className="hover:underline">Polls</Link>
             <Link to="/reports" className="hover:underline">Reports</Link>
-
           </nav>
-          <section className="flex items-center space-x-2">
+          <section className="flex items-center space-x-4">
+            <Link
+              to="/officials-dashboard"
+              className="px-4 py-2 bg-white text-[#006699] rounded-lg hover:bg-gray-200"
+            >
+              Officials Dashboard
+            </Link>
             <span className="bg-white text-[#006699] rounded-full w-10 h-10 flex items-center justify-center font-bold">
               {user.name?.charAt(0).toUpperCase() || "U"}
             </span>
           </section>
         </header>
 
-       
         <section className="p-8 flex-1">
           <h1 className="text-2xl font-bold">
             Welcome, {user.name || "User"}!
@@ -94,7 +94,6 @@ export default function DashboardPage() {
             See what’s happening in your community and make your voice heard.
           </p>
 
-        
           <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <section className="bg-white p-6 rounded-lg shadow text-center">
               <h3 className="text-lg font-semibold mb-2">My Petitions</h3>
@@ -110,7 +109,6 @@ export default function DashboardPage() {
             </section>
           </section>
 
-          
           <h2 className="text-xl font-bold mb-4">Active Petitions Near You</h2>
           <section className="flex space-x-4 mb-6 flex-wrap">
             {[
@@ -137,7 +135,6 @@ export default function DashboardPage() {
             ))}
           </section>
 
-       
           <section className="bg-white p-6 rounded-lg shadow">
             {filteredPetitions.length === 0 ? (
               <p className="text-gray-600 text-center">
@@ -158,7 +155,6 @@ export default function DashboardPage() {
             )}
           </section>
 
-       
           {activeFilter !== "All" && (
             <section className="text-center mt-6">
               <button
@@ -171,7 +167,6 @@ export default function DashboardPage() {
           )}
         </section>
 
-    
         <section className="bg-gradient-to-r from-[#006a9a] to-[#0097cc] text-white p-6">
           <section className="flex justify-between flex-col md:flex-row">
             <p>© 2025 Civix. All rights reserved.</p>
