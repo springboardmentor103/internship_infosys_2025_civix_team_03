@@ -6,7 +6,7 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const connectDB = require("./src/config/db");
 const path = require("path");
-
+const signatureRoutes = require("./src/routes/signatureRoutes");
 dotenv.config();
 connectDB();
 
@@ -30,6 +30,8 @@ app.get("/health", (_req, res) => res.json({ ok: true, uptime: process.uptime() 
 
 app.use("/api/auth", require("./src/routes/authRoutes"));
 app.use("/api/dashboard", require("./src/routes/dashboardRoutes"));
+app.use("/api/petitions", require("./src/routes/petitionRoutes"));
+app.use("/api/signatures", require("./src/routes/signatureRoutes"));
 
 
 const clientBuild = path.join(__dirname, "..", "client", "dist");
