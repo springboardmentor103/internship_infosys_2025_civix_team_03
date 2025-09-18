@@ -3,7 +3,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendOtp = require("../utils/sendOtp");
 
-
 const signAccess = (payload) =>
   jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
     expiresIn: process.env.JWT_ACCESS_EXPIRES || "15m",
@@ -24,10 +23,8 @@ const setRefreshCookie = (res, token) => {
   });
 };
 
-
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
-
 
 exports.register = async (req, res) => {
   try {
@@ -45,7 +42,7 @@ exports.register = async (req, res) => {
       name,
       email,
       password: hashed,
-      locationAllowed: !!locationAllowed,
+      location: locationAllowed ? "Allowed" : undefined, // Assuming locationAllowed means share location
       isVerified: false,
       otp,
       otpExpires: Date.now() + 10 * 60 * 1000, 
@@ -62,7 +59,6 @@ exports.register = async (req, res) => {
     return res.status(500).json({ error: "Server error during registration" });
   }
 };
-
 
 exports.verifyOtp = async (req, res) => {
   try {
@@ -88,6 +84,7 @@ exports.verifyOtp = async (req, res) => {
       message: "Account verified successfully",
       accessToken,
       user: { id: user._id, name: user.name, email: user.email },
+      redirect: "/dashboard",
     });
   } catch (err) {
     console.error("Verify OTP error:", err);
@@ -95,21 +92,17 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: "Email and password required" });
+    if (!email || !password) return res.status(400).json({ message: "Email and password required" });
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid email or password" });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user.isVerified) return res.status(400).json({ message: "Account not verified" });
 
-    if (!user.isVerified)
-      return res.status(400).json({ message: "Please verify your account with OTP first" });
-
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(400).json({ message: "Invalid email or password" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
     const payload = { id: user._id.toString(), name: user.name };
     const accessToken = signAccess(payload);
@@ -127,7 +120,6 @@ exports.login = async (req, res) => {
     return res.status(500).json({ error: "Server error during login" });
   }
 };
-
 
 exports.forgotPassword = async (req, res) => {
   try {
@@ -148,7 +140,6 @@ exports.forgotPassword = async (req, res) => {
     return res.status(500).json({ error: "Server error during forgot password" });
   }
 };
-
 
 exports.resetPassword = async (req, res) => {
   try {
@@ -171,7 +162,6 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-
 exports.refresh = async (req, res) => {
   try {
     const token = req.cookies?.refreshToken;
@@ -187,12 +177,10 @@ exports.refresh = async (req, res) => {
   }
 };
 
-
 exports.logout = async (_req, res) => {
   res.clearCookie("refreshToken", { httpOnly: true, sameSite: "lax" });
   return res.json({ message: "Logged out" });
 };
-
 
 exports.me = async (req, res) => {
   try {

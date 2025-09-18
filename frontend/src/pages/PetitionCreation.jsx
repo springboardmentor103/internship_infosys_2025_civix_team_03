@@ -1,29 +1,72 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 
-function PetitionCreation({ user }) {
+
+
+import React, { useState, useContext } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { AuthContext } from "../contexts/AuthContext";
+import { PetitionContext } from "../contexts/PetitionContext";
+
+function PetitionCreation() {
+  const { user } = useContext(AuthContext);
+  const { createPetition, fetchPetitions } = useContext(PetitionContext);
   const [petition, setPetition] = useState({
     title: "",
     category: "",
     location: "",
     signatureGoal: "",
     description: "",
+    image: null,
   });
-
+  const [preview, setPreview] = useState(null);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setPetition({ ...petition, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPetition({ ...petition, image: file });
+      const reader = new FileReader();
+      reader.onload = (ev) => setPreview(ev.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Petition submitted:", petition);
+    if (!user) {
+      alert("Please log in to create a petition");
+      navigate("/login");
+      return;
+    }
+    // Validate fields before submission
+    if (!petition.title || !petition.category || !petition.signatureGoal || !petition.description) {
+      alert("Please fill in all required fields: Title, Category, Signature Goal, and Description");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("title", petition.title);
+    formData.append("description", petition.description);
+    formData.append("category", petition.category);
+    formData.append("location", petition.location || "");
+    formData.append("signatureGoal", petition.signatureGoal);
+    if (petition.image) formData.append("image", petition.image);
+
+    try {
+      await createPetition(formData);
+      fetchPetitions();
+      alert("Petition created successfully!");
+      navigate("/all-petitions");
+    } catch (err) {
+      alert("Failed to create petition: " + err.message);
+    }
   };
 
   return (
     <section className="flex min-h-screen bg-gray-100">
-     
       <aside className="w-64 bg-[#006699] text-white flex flex-col p-4 space-y-4">
         <h1 className="text-2xl font-bold mb-6">Civix</h1>
         <nav className="flex flex-col space-y-3">
@@ -48,9 +91,7 @@ function PetitionCreation({ user }) {
         </nav>
       </aside>
 
-    
       <section className="flex-1 flex flex-col">
-      
         <header className="bg-[#006699] text-white flex justify-between items-center px-6 py-3">
           <nav className="flex-1 flex justify-center space-x-6 text-lg">
             <Link to="/dashboard" className="hover:underline">Home</Link>
@@ -65,11 +106,9 @@ function PetitionCreation({ user }) {
           </section>
         </header>
 
-       
         <section className="flex-1 p-8">
           <section className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Create Petition</h2>
-      
             <button
               onClick={() => navigate("/all-petitions")}
               className="bg-[#006699] text-white px-4 py-2 rounded-lg hover:bg-[#00557a]"
@@ -82,11 +121,10 @@ function PetitionCreation({ user }) {
             onSubmit={handleSubmit}
             className="grid grid-cols-2 gap-6 bg-white shadow-md rounded-xl p-6"
           >
-           
             <section className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-4">
-              {petition.image ? (
+              {preview ? (
                 <img
-                  src={URL.createObjectURL(petition.image)}
+                  src={preview}
                   alt="Preview"
                   className="w-full h-48 object-cover rounded-lg"
                 />
@@ -96,14 +134,11 @@ function PetitionCreation({ user }) {
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) =>
-                  setPetition({ ...petition, image: e.target.files[0] })
-                }
+                onChange={handleImageChange}
                 className="mt-3"
               />
             </section>
 
-           
             <section className="flex flex-col space-y-4">
               <input
                 type="text"
@@ -112,6 +147,7 @@ function PetitionCreation({ user }) {
                 value={petition.title}
                 onChange={handleChange}
                 className="border p-2 rounded-lg"
+                required
               />
               <section className="flex space-x-2">
                 <select
@@ -119,12 +155,16 @@ function PetitionCreation({ user }) {
                   value={petition.category}
                   onChange={handleChange}
                   className="border p-2 rounded-lg flex-1"
+                  required
                 >
                   <option value="">Select Category</option>
                   <option value="Environment">Environment</option>
                   <option value="Education">Education</option>
                   <option value="Healthcare">Healthcare</option>
                   <option value="Public Safety">Public Safety</option>
+                  <option value="Infrastructure">Infrastructure</option>
+                  <option value="Transportation">Transportation</option>
+                  <option value="Housing">Housing</option>
                 </select>
                 <input
                   type="text"
@@ -142,6 +182,8 @@ function PetitionCreation({ user }) {
                 value={petition.signatureGoal}
                 onChange={handleChange}
                 className="border p-2 rounded-lg"
+                min="1"
+                required
               />
               <textarea
                 name="description"
@@ -150,6 +192,7 @@ function PetitionCreation({ user }) {
                 value={petition.description}
                 onChange={handleChange}
                 className="border p-2 rounded-lg"
+                required
               ></textarea>
               <button
                 type="submit"

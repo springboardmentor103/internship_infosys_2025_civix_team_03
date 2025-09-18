@@ -21,13 +21,13 @@ export async function apiFetch(url, opts = {}) {
   const headers = { ...(opts.headers || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  let res = await fetch(url, { ...opts, headers });
+  let res = await fetch(url, { ...opts, headers, credentials: "include" });
 
   if (res.status === 401) {
     try {
       const newToken = await refreshAccessToken();
       headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(url, { ...opts, headers });
+      res = await fetch(url, { ...opts, headers, credentials: "include" });
     } catch (err) {
       // if refresh also failed, redirect to login
       localStorage.removeItem("accessToken");
@@ -39,3 +39,22 @@ export async function apiFetch(url, opts = {}) {
 
   return res;
 }
+
+// export async function apiFetch(url, options = {}) {
+//   try {
+//     const response = await fetch(url, {
+//       ...options,
+//       headers: {
+//         ...options.headers,
+//         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`, // Adjust token storage
+//       },
+//     });
+//     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+//     return response;
+//   } catch (error) {
+//     console.error('API Fetch Error:', error);
+//     throw error;
+//   }
+// }
+
+

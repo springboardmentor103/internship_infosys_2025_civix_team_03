@@ -1,19 +1,94 @@
-
-import React, { useState, useRef, useContext } from "react";
+import React, { useState, useRef, useContext, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import SignatureCanvas from "react-signature-canvas";
-import { PetitionContext } from "../PetitionContext";
+import { PetitionContext } from "../contexts/PetitionContext";
+import { AuthContext } from "../contexts/AuthContext";
+import { apiFetch } from "../utils/api";
 
 function PetitionDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const sigCanvas = useRef(null);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const { petitions, setPetitions } = useContext(PetitionContext);
+  const { signPetition, fetchPetitions } = useContext(PetitionContext);
+  const { user } = useContext(AuthContext);
+  const [petition, setPetition] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const petition = petitions.find((p) => p.id === parseInt(id));
+  useEffect(() => {
+    async function fetchSinglePetition() {
+      try {
+        setLoading(true);
+        const res = await apiFetch(`http://localhost:5000/api/petitions/${id}`);
+        if (!res.ok) throw new Error("Petition not found");
+        const data = await res.json();
+        if (data.image) {
+          data.image = `data:image/jpeg;base64,${data.image}`; // Adjust MIME type if needed
+        }
+        // Transform signatures to data URLs
+        if (data.signaturesList && Array.isArray(data.signaturesList)) {
+          data.signaturesList = data.signaturesList.map(sig => `data:image/png;base64,${sig}`);
+        }
+        setPetition(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSinglePetition();
+  }, [id]);
 
-  if (!petition) {
+  const handleSignPetition = () => {
+    if (!user) {
+      alert("Please log in to sign");
+      navigate("/login");
+      return;
+    }
+    setShowSignatureModal(true);
+  };
+
+  const handleSaveSignature = async () => {
+    if (sigCanvas.current.isEmpty()) {
+      alert("Please provide a signature before saving.");
+      return;
+    }
+    try {
+      const signatureData = sigCanvas.current.toDataURL("image/png"); // Get base64 string
+      await signPetition(id, signatureData); // Pass signature data
+      setShowSignatureModal(false);
+      sigCanvas.current.clear();
+      fetchPetitions();
+      // Refetch single petition to update signatures
+      const res = await apiFetch(`http://localhost:5000/api/petitions/${id}`);
+      const data = await res.json();
+      if (data.image) {
+        data.image = `data:image/jpeg;base64,${data.image}`; // Adjust MIME type if needed
+      }
+      if (data.signaturesList && Array.isArray(data.signaturesList)) {
+        data.signaturesList = data.signaturesList.map(sig => `data:image/png;base64,${sig}`);
+      }
+      setPetition(data);
+    } catch (err) {
+      alert("Failed to sign: " + err.message);
+    }
+  };
+
+  const handleClearSignature = () => {
+    sigCanvas.current.clear();
+  };
+
+  const handleCloseModal = () => {
+    setShowSignatureModal(false);
+    sigCanvas.current.clear();
+  };
+
+  if (loading) {
+    return <div className="flex min-h-screen bg-gray-100 justify-center items-center"><p>Loading...</p></div>;
+  }
+
+  if (error || !petition) {
     return (
       <div className="flex min-h-screen bg-gray-100 justify-center items-center">
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -25,40 +100,6 @@ function PetitionDetails() {
       </div>
     );
   }
-
-  const handleSignPetition = () => {
-    setShowSignatureModal(true);
-  };
-
-  const handleSaveSignature = () => {
-    if (sigCanvas.current.isEmpty()) {
-      alert("Please provide a signature before saving.");
-      return;
-    }
-    const signatureData = sigCanvas.current.toDataURL();
-    setPetitions((prevPetitions) =>
-      prevPetitions.map((p) =>
-        p.id === petition.id
-          ? {
-              ...p,
-              signatures: p.signatures + 1,
-              signaturesList: [...p.signaturesList, signatureData],
-            }
-          : p
-      )
-    );
-    setShowSignatureModal(false);
-    sigCanvas.current.clear();
-  };
-
-  const handleClearSignature = () => {
-    sigCanvas.current.clear();
-  };
-
-  const handleCloseModal = () => {
-    setShowSignatureModal(false);
-    sigCanvas.current.clear();
-  };
 
   return (
     <section className="flex min-h-screen bg-gray-100">
@@ -96,7 +137,7 @@ function PetitionDetails() {
           </nav>
           <section className="flex items-center space-x-2">
             <span className="bg-white text-[#006a9a] rounded-full w-10 h-10 flex items-center justify-center font-bold">
-              U
+              {user?.name?.charAt(0).toUpperCase() || "U"}
             </span>
           </section>
         </header>
@@ -107,19 +148,23 @@ function PetitionDetails() {
               ← Back to Petitions
             </Link>
             <h2 className="text-2xl font-bold mb-4">{petition.title}</h2>
-            <img
-              src={petition.image}
-              alt={petition.title}
-              className="w-full max-w-md h-auto rounded-lg mb-4"
-            />
+            {petition.image ? (
+              <img
+                src={petition.image}
+                alt={petition.title}
+                className="w-full max-w-md h-auto rounded-lg mb-4"
+              />
+            ) : (
+              <p className="text-gray-500 mb-4">No image available</p>
+            )}
             <p className="text-gray-700 mb-4">{petition.description}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-sm text-gray-500">
-                  <span className="font-semibold">Posted By:</span> {petition.user}
+                  <span className="font-semibold">Posted By:</span> {petition.user.name}
                 </p>
                 <p className="text-sm text-gray-500">
-                  <span className="font-semibold">Posted On:</span> {petition.postedDate}
+                  <span className="font-semibold">Posted On:</span> {new Date(petition.postedDate).toLocaleDateString()}
                 </p>
                 <p className="text-sm text-gray-500">
                   <span className="font-semibold">Category:</span> {petition.category}
@@ -144,7 +189,7 @@ function PetitionDetails() {
               Sign Petition
             </button>
             <h3 className="text-lg font-semibold mb-2">Signatures</h3>
-            {petition.signaturesList.length > 0 ? (
+            {petition.signatures > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {petition.signaturesList.map((signature, index) => (
                   <img
